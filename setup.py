@@ -18,7 +18,7 @@ class BattleSetup(object):
     """
 
     __MIN_GRIDSIZE = 3
-    __MAX_GRIDSIZE = 10
+    __MAX_GRIDSIZE = 12
     __SHIP_SIZE = 3 # each ship take 3 cells width
 
 
@@ -34,8 +34,8 @@ class BattleSetup(object):
 
     def setgridsize(self, gridsize):
         try:
-            if gridsize < BattleSetup.__MIN_GRIDSIZE or gridsize > BattleSetup.__MAX_GRIDSIZE:
-                raise ValueError("Grid size is not in the range of {0} and {1}.".format(BattleSetup.__MIN_GRIDSIZE, BattleSetup.__MAX_GRIDSIZE))
+            if gridsize < BattleSetup.__MIN_GRIDSIZE or gridsize > BattleSetup.__MAX_GRIDSIZE or gridsize % BattleSetup.__SHIP_SIZE != 0:
+                raise ValueError("Grid size should be in the range of [{0}, {1}] and multiple of {2}.".format(BattleSetup.__MIN_GRIDSIZE, BattleSetup.__MAX_GRIDSIZE, BattleSetup.__SHIP_SIZE))
         except ValueError as msg:
             print(msg)
             sys.exit(0)
@@ -53,10 +53,11 @@ class BattleSetup(object):
     def setshipcount(self, shipcount):
         try:
             # per 3x3 subgrid ie. battleship size, one ship can be installed 
-            self._max_shipcount = self.gridsize ** 2 // BattleSetup.__SHIP_SIZE ** 2
+            # except last 3xN subgrid, only one battle ship 
+            self._max_shipcount = ((self.gridsize ** 2 - self.gridsize * BattleSetup.__SHIP_SIZE) // BattleSetup.__SHIP_SIZE ** 2) + 1
 
             if shipcount > self._max_shipcount or shipcount == 0:
-                raise ValueError("Battleship count should be in range of {0} and {1}.".format(1, self._max_shipcount))
+                raise ValueError("Battleship count should be in range of [{0}, {1}].".format(1, self._max_shipcount))
         except ValueError as msg:
             print("Error:", msg)
             sys.exit(0)
@@ -71,32 +72,87 @@ class BattleSetup(object):
         """
         Generate random non-overlapping ship coordinates,
         horizontally or vertically. Grid is divided into sub grids of
-        SHIP_SIZE x SHIP_SIZE. Axis is choosen randomly either Horizontal
-        or Vertical to place the ship.
+        SHIP_SIZE x SHIP_SIZE. 
         """
         coordinates_count = 0
         for row in range(0, self.gridsize, BattleSetup.__SHIP_SIZE):
             for col in range(0, self.gridsize, BattleSetup.__SHIP_SIZE):
                 if coordinates_count >= self.shipcount:
                     return
-                axis = randint(0, 1) # 0 means Horizontal, 1 means Vertical
-                if axis == 0:
+                # last SHIP_SIZE ie. 3 rows are reserved for 
+                # one vertical axis battleship
+                if self.gridsize - BattleSetup.__SHIP_SIZE == row:
+                    r = row
+                    c = randint(0, self.gridsize-1)
+                    self._coordinates.append([r, c, "Vertical", "Not Destroyed"])
+                    coordinates_count += 1
+                else:
                     r = randint(row, row+2)
                     c = col
-                    self._coordinates.append((r, c, "Horizontal"))
-                else:
-                    r = row
-                    c = randint(col, col+2)
-                    self._coordinates.append((r, c, "Vertical"))
+                    self._coordinates.append([r, c, "Horizontal", "Not Destroyed"])
                 coordinates_count += 1
 
 
-    def gridprintbefore(self):
-        pass
+    def gridprint(self):
+        """
+        Gameplay grid will be printed and can be used to print before and after
+        game match grid. Destroyed ships will be shown as XX.
+        """
+        self._coordinates.sort()
+        print("GamePlay Corrdinate:", self._coordinates)
+
+        cord_indx, cord_len = 0, len(self._coordinates)
+        row = 0
+        vert_char_count = -1
+
+        print("  " + "_" * (2*self.gridsize-1))
+
+        while row < self.gridsize:
+            print(chr(65+row), end="") # row-wise alpha denote
+
+            col = 0
+            while col < self.gridsize:
+                if cord_indx < cord_len:
+                    point_r, point_c, axis, status = self._coordinates[cord_indx]
+                if point_r == row and point_c == col and axis == "Horizontal":
+                    print("| BT", end="") if status == "Not Destroyed" else print("| XX", end="")
+                    print(cord_indx+1, end=" ")
+                    cord_indx += 1
+                    col += 3
+                elif point_c == col and (row >= point_r and row <= point_r + 2) and axis == "Vertical":
+                    vert_char_count += 1
+                    if vert_char_count == 0:
+                        print("|B", end="") if status == "Not Destroyed" else print("|X", end="")
+                    elif vert_char_count == 1:
+                        print("|T", end="") if status == "Not Destroyed" else print("|X", end="")
+                    elif vert_char_count == 2:
+                        print("|" + str(cord_indx+1), end="")
+                        vert_char_count = -1
+                        cord_indx += 1
+                    col += 1
+                # elif axis == "Vertical":
+                #     cord_indx += 1
+                #     print("|_", end="")
+                #     col += 1
+                else:
+                    print("|_", end="")
+                    col += 1
+            print("|")
+            row += 1
+
+        # col-wise cell denote as numbers
+        print(end=" ")
+        for i in range(self.gridsize):
+            print(" " + str(i), end="")
+        print()
+
+
+    
+
 
 if __name__ == "__main__":
-    obj = BattleSetup(6, 4)
+    obj = BattleSetup(gridsize=6, shipcount=3)
     print(obj.gridsize)
     print(obj.shipcount)
     obj.shipcoordinates()
-    print(obj._coordinates)
+    obj.gridprint()
