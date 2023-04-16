@@ -18,7 +18,7 @@ class BattleSetup(object):
     """
 
     __MIN_GRIDSIZE = 3
-    __MAX_GRIDSIZE = 12
+    __MAX_GRIDSIZE = 9
     __SHIP_SIZE = 3 # each ship take 3 cells width
 
 
@@ -84,22 +84,24 @@ class BattleSetup(object):
                 if self.gridsize - BattleSetup.__SHIP_SIZE == row:
                     r = row
                     c = randint(0, self.gridsize-1)
-                    self._coordinates.append([r, c, "Vertical", "Not Destroyed"])
+                    self._coordinates.append([r, c, "Vertical"])
                     coordinates_count += 1
                 else:
                     r = randint(row, row+2)
                     c = col
-                    self._coordinates.append([r, c, "Horizontal", "Not Destroyed"])
+                    self._coordinates.append([r, c, "Horizontal"])
                 coordinates_count += 1
 
 
     def gridprint(self):
         """
-        Gameplay grid will be printed and can be used to print before and after
-        game match grid. Destroyed ships will be shown as XX.
+        Gameplay grid will be printed along with battleships. 
         """
-        self._coordinates.sort()
-        print("GamePlay Corrdinate:", self._coordinates)
+        if not len(self._coordinates):
+            self.shipcoordinates()
+
+        self._coordinates.sort() # sort so that row wise printing can happens
+        # print("GamePlay Corrdinate:", self._coordinates)
 
         cord_indx, cord_len = 0, len(self._coordinates)
         row = 0
@@ -113,18 +115,18 @@ class BattleSetup(object):
             col = 0
             while col < self.gridsize:
                 if cord_indx < cord_len:
-                    point_r, point_c, axis, status = self._coordinates[cord_indx]
+                    point_r, point_c, axis = self._coordinates[cord_indx]
                 if point_r == row and point_c == col and axis == "Horizontal":
-                    print("| BT", end="") if status == "Not Destroyed" else print("| XX", end="")
+                    print("| BT", end="")   #if status == "Not Destroyed" else print("| XX", end="")
                     print(cord_indx+1, end=" ")
                     cord_indx += 1
                     col += 3
                 elif point_c == col and (row >= point_r and row <= point_r + 2) and axis == "Vertical":
                     vert_char_count += 1
                     if vert_char_count == 0:
-                        print("|B", end="") if status == "Not Destroyed" else print("|X", end="")
+                        print("|B", end="")     #if status == "Not Destroyed" else print("|X", end="")
                     elif vert_char_count == 1:
-                        print("|T", end="") if status == "Not Destroyed" else print("|X", end="")
+                        print("|T", end="")     #if status == "Not Destroyed" else print("|X", end="")
                     elif vert_char_count == 2:
                         print("|" + str(cord_indx+1), end="")
                         vert_char_count = -1
@@ -148,11 +150,8 @@ class BattleSetup(object):
 
 
     
-
-
 if __name__ == "__main__":
-    obj = BattleSetup(gridsize=6, shipcount=3)
-    print(obj.gridsize)
-    print(obj.shipcount)
+    obj = BattleSetup(gridsize=9, shipcount=7)
     obj.shipcoordinates()
     obj.gridprint()
+    # print(obj._coordinates)
